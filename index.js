@@ -17,7 +17,6 @@ const URL =
 const config = { useUnifiedTopology: true };
 
 let database = null;
-let loggedIn = [];
 
 mongoClient.connect(URL, config, function (error, dbManager) {
   if (error) {
@@ -28,19 +27,20 @@ mongoClient.connect(URL, config, function (error, dbManager) {
   }
 });
 
-function authenticate(authval) {
-  for (let i = 0; i < loggedIn.length; i++) {
-    let encoded =
-      "Basic " +
-      Buffer.from(loggedIn[i].userName + ":" + loggedIn[i].password).toString(
-        "base64"
-      );
+async function authenticate(code) {
+  code = code.substr(6); // removing the Basic prefix
+  let user_pass = Buffer.from(code, "base64").toString("utf8").split(":"); // decode to userName and password
 
-    console.log("Encoded " + encoded);
-    console.log("authval " + authval);
-    if (encoded == authval) return loggedIn[i];
+  let query = { userName: user_pass[0], password: user_pass[1] }; // here after split , user_pass is [userName, password]
+
+  // check if user pass matched with any registered user record
+  const table = database.collection("User");
+  let data = await table.find(query).toArray();
+  if (data.length == 0) {
+    return null;
+  } else {
+    return query;
   }
-
   return null;
 }
 
@@ -104,15 +104,14 @@ app.post("/login", function (req, res) {
     if (data.length == 0 || error) {
       res.send("Login failed");
     } else {
-      loggedIn.push(authData);
-
       res.send("Hello " + authData.userName + ", Welcome to postBook");
     }
   });
 });
 
-app.post("/post", function (req, res) {
-  let authData = authenticate(req.headers.authorization);
+app.post("/post", async function (req, res) {
+  let authData = await authenticate(req.headers.authorization);
+  console.log("here is authdata ", authData);
   if (!authData) {
     res.redirect("/unauth");
   } else {
