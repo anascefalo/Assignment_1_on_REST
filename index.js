@@ -60,9 +60,7 @@ app.get("/all-posts", function (req, res) {
     if (error) {
       res.send("Error while loading posts");
     } else {
-      let posts = "";
-      for (let i = 0; i < data.length; i++) posts += data[i].post + "\n";
-      res.send("Here is all posts....now eat them (-_-)\n\n" + posts);
+      res.send(data);
     }
   });
 });
@@ -75,9 +73,7 @@ app.get("/posts/:userName", function (req, res) {
     if (error) {
       res.send("Error while loading posts");
     } else {
-      let posts = [];
-      for (let i = 0; i < data.length; i++) posts.push(data[i].post);
-      res.send(posts);
+      res.send(data);
     }
   });
 });
@@ -117,7 +113,14 @@ app.post("/post", async function (req, res) {
   } else {
     const table = database.collection("Posts");
 
-    let data = { userName: authData.userName, post: req.body };
+    let post = JSON.parse(req.body);
+    console.log(post);
+    let data = {
+      title: post.title,
+      body: post.body,
+      date: new Date(),
+      userName: authData.userName,
+    };
 
     table.insert(data, function (error) {
       if (error) {
@@ -149,6 +152,17 @@ app.delete("/post/:postID", function (req, res) {
   }
 });
 
+app.put("/test", function (req, res) {
+  let temp = JSON.parse(req.body);
+  let updatedPost = {};
+
+  if (temp.title != undefined) updatedPost["title"] = temp.title;
+  if (temp.body != undefined) updatedPost["body"] = temp.body;
+
+  console.log("here is post ", updatedPost);
+  console.log(Object.entries(updatedPost).length);
+});
+
 app.put("/update-post/:postID", function (req, res) {
   let authData = authenticate(req.headers.authorization);
   if (!authData) {
@@ -157,16 +171,27 @@ app.put("/update-post/:postID", function (req, res) {
     const table = database.collection("Posts");
 
     let item = { _id: ObjectId(req.params.postID) };
-    let updatedPost = { $set: { post: req.body } };
-    console.log(req.params.postID);
 
-    table.updateOne(item, updatedPost, function (error, data) {
-      if (error) {
-        res.send("Oops!!  Couldn't update post.....");
-      } else {
-        res.send("Post updated to : " + req.body);
-      }
-    });
+    let temp = JSON.parse(req.body);
+    let updatedPost = {};
+
+    if (temp.title != undefined) updatedPost["title"] = temp.title;
+    if (temp.body != undefined) updatedPost["body"] = temp.body;
+    if (Object.entries(updatedPost).length == 0) {
+      res.send(
+        "Update 'title' or 'body' or both .....what are you stupid or something ....."
+      );
+    } else {
+      let query = { $set: updatedPost };
+
+      table.updateOne(item, query, function (error, data) {
+        if (error) {
+          res.send("Oops!!  Couldn't update post.....");
+        } else {
+          res.send("Post updated to : " + req.body);
+        }
+      });
+    }
   }
 });
 
