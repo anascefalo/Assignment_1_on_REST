@@ -1,0 +1,1 @@
+IDE winform app access user informations like email, openId profiles using MS graph. It only accesses informations that are pre configured by user's Azure AD adminstrator, so it access nothing that's not agreed upon with the user already.
